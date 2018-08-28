@@ -21,8 +21,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/DSiSc/craft/types"
+	"github.com/DSiSc/statedb-NG/common/rlp"
 )
 
 var indices = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "[17]"}
@@ -55,7 +55,7 @@ var nilValueNode = valueNode(nil)
 func (n *fullNode) EncodeRLP(w io.Writer) error {
 	var nodes [17]node
 
-	for i, child := range &n.Children {
+	for i, child := range n.Children {
 		if child != nil {
 			nodes[i] = child
 		} else {
@@ -98,7 +98,7 @@ func (n valueNode) String() string  { return n.fstring("") }
 
 func (n *fullNode) fstring(ind string) string {
 	resp := fmt.Sprintf("[\n%s  ", ind)
-	for i, node := range &n.Children {
+	for i, node := range n.Children {
 		if node == nil {
 			resp += fmt.Sprintf("%s: <nil> ", indices[i])
 		} else {
@@ -187,7 +187,7 @@ func decodeFull(hash, elems []byte, cachegen uint16) (*fullNode, error) {
 	return n, nil
 }
 
-const hashLen = len(common.Hash{})
+const hashLen = len(types.Hash{})
 
 func decodeRef(buf []byte, cachegen uint16) (node, []byte, error) {
 	kind, val, rest, err := rlp.Split(buf)

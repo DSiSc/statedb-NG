@@ -20,9 +20,10 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/DSiSc/craft/types"
+	"github.com/DSiSc/statedb-NG/common"
+	"github.com/DSiSc/statedb-NG/common/crypto/sha3"
+	"github.com/DSiSc/statedb-NG/common/rlp"
 )
 
 type hasher struct {
@@ -184,7 +185,7 @@ func (h *hasher) store(n node, db *Database, force bool) (node, error) {
 
 	if db != nil {
 		// We are pooling the trie nodes into an intermediate memory cache
-		hash := common.BytesToHash(hash)
+		hash := types.BytesToHash(hash)
 
 		db.lock.Lock()
 		db.insert(hash, h.tmp, n)

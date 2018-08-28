@@ -19,8 +19,9 @@ package trie
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/DSiSc/craft/types"
+	"github.com/DSiSc/statedb-NG/common"
+	"github.com/DSiSc/statedb-NG/common/log"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all
@@ -35,7 +36,7 @@ import (
 // SecureTrie is not safe for concurrent use.
 type SecureTrie struct {
 	trie             Trie
-	hashKeyBuf       [common.HashLength]byte
+	hashKeyBuf       [types.HashLength]byte
 	secKeyCache      map[string][]byte
 	secKeyCacheOwner *SecureTrie // Pointer to self, replace the key cache on mismatch
 }
@@ -51,7 +52,7 @@ type SecureTrie struct {
 // Loaded nodes are kept around until their 'cache generation' expires.
 // A new cache generation is created by each call to Commit.
 // cachelimit sets the number of past cache generations to keep.
-func NewSecure(root common.Hash, db *Database, cachelimit uint16) (*SecureTrie, error) {
+func NewSecure(root types.Hash, db *Database, cachelimit uint16) (*SecureTrie, error) {
 	if db == nil {
 		panic("trie.NewSecure called without a database")
 	}
@@ -131,7 +132,7 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 	if key, ok := t.getSecKeyCache()[string(shaKey)]; ok {
 		return key
 	}
-	key, _ := t.trie.db.preimage(common.BytesToHash(shaKey))
+	key, _ := t.trie.db.preimage(types.BytesToHash(shaKey))
 	return key
 }
 
@@ -140,12 +141,12 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 //
 // Committing flushes nodes from memory. Subsequent Get calls will load nodes
 // from the database.
-func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
+func (t *SecureTrie) Commit(onleaf LeafCallback) (root types.Hash, err error) {
 	// Write all the pre-images to the actual disk database
 	if len(t.getSecKeyCache()) > 0 {
 		t.trie.db.lock.Lock()
 		for hk, key := range t.secKeyCache {
-			t.trie.db.insertPreimage(common.BytesToHash([]byte(hk)), key)
+			t.trie.db.insertPreimage(types.BytesToHash([]byte(hk)), key)
 		}
 		t.trie.db.lock.Unlock()
 
@@ -157,7 +158,7 @@ func (t *SecureTrie) Commit(onleaf LeafCallback) (root common.Hash, err error) {
 
 // Hash returns the root hash of SecureTrie. It does not write to the
 // database and can be used even if the trie doesn't have one.
-func (t *SecureTrie) Hash() common.Hash {
+func (t *SecureTrie) Hash() types.Hash {
 	return t.trie.Hash()
 }
 
