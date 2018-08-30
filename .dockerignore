@@ -1,8 +1,14 @@
-**/.git
+#
+# Copyright(c) 2018 DSiSc Group. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 .git
-!.git/HEAD
-!.git/refs/heads
-**/*_test.go
+.circleci
+.github
+.codecov.yml
+.mailmap
+.travis.yml
 
 build/_workspace
 build/_bin
