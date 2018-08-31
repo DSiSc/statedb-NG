@@ -22,6 +22,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/common/log"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all
@@ -132,7 +133,7 @@ func (t *SecureTrie) GetKey(shaKey []byte) []byte {
 	if key, ok := t.getSecKeyCache()[string(shaKey)]; ok {
 		return key
 	}
-	key, _ := t.trie.db.preimage(types.BytesToHash(shaKey))
+	key, _ := t.trie.db.preimage(util.BytesToHash(shaKey))
 	return key
 }
 
@@ -146,7 +147,7 @@ func (t *SecureTrie) Commit(onleaf LeafCallback) (root types.Hash, err error) {
 	if len(t.getSecKeyCache()) > 0 {
 		t.trie.db.lock.Lock()
 		for hk, key := range t.secKeyCache {
-			t.trie.db.insertPreimage(types.BytesToHash([]byte(hk)), key)
+			t.trie.db.insertPreimage(util.BytesToHash([]byte(hk)), key)
 		}
 		t.trie.db.lock.Unlock()
 

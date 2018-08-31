@@ -23,6 +23,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.
@@ -60,11 +61,11 @@ func makeTestTrie() (*Database, *Trie, map[string][]byte) {
 // content map.
 func checkTrieContents(t *testing.T, db *Database, root []byte, content map[string][]byte) {
 	// Check root availability and trie contents
-	trie, err := New(types.BytesToHash(root), db)
+	trie, err := New(util.BytesToHash(root), db)
 	if err != nil {
 		t.Fatalf("failed to create trie at %x: %v", root, err)
 	}
-	if err := checkTrieConsistency(db, types.BytesToHash(root)); err != nil {
+	if err := checkTrieConsistency(db, util.BytesToHash(root)); err != nil {
 		t.Fatalf("inconsistent trie at %x: %v", root, err)
 	}
 	for key, val := range content {
@@ -347,7 +348,7 @@ func TestIncompleteSync(t *testing.T) {
 	}
 	// Sanity check that removing any node from the database is detected
 	for _, node := range added[1:] {
-		key := node.Bytes()
+		key := util.HashToBytes(node)
 		value, _ := diskdb.Get(key)
 
 		diskdb.Delete(key)

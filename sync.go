@@ -22,6 +22,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/trie"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // NewStateSync create a new state trie download scheduler.
@@ -33,7 +34,7 @@ func NewStateSync(root types.Hash, database trie.DatabaseReader) *trie.Sync {
 			return err
 		}
 		syncer.AddSubTrie(obj.Root, 64, parent, nil)
-		syncer.AddRawEntry(types.BytesToHash(obj.CodeHash), 64, parent)
+		syncer.AddRawEntry(util.BytesToHash(obj.CodeHash), 64, parent)
 		return nil
 	}
 	syncer = trie.NewSync(root, database, callback)

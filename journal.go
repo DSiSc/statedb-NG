@@ -20,6 +20,7 @@ import (
 	"math/big"
 
 	"github.com/DSiSc/craft/types"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // journalEntry is a modification entry in the state change journal that can be
@@ -162,7 +163,7 @@ func (ch suicideChange) dirtied() *types.Address {
 	return ch.account
 }
 
-var ripemd = types.HexToAddress("0000000000000000000000000000000000000003")
+var ripemd = util.HexToAddress("0000000000000000000000000000000000000003")
 
 func (ch touchChange) revert(s *StateDB) {
 }
@@ -188,7 +189,7 @@ func (ch nonceChange) dirtied() *types.Address {
 }
 
 func (ch codeChange) revert(s *StateDB) {
-	s.getStateObject(*ch.account).setCode(types.BytesToHash(ch.prevhash), ch.prevcode)
+	s.getStateObject(*ch.account).setCode(util.BytesToHash(ch.prevhash), ch.prevcode)
 }
 
 func (ch codeChange) dirtied() *types.Address {

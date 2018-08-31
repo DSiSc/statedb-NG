@@ -20,10 +20,10 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/common/crypto/sha3"
 	"github.com/DSiSc/statedb-NG/common/rlp"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 type hasher struct {
@@ -185,7 +185,7 @@ func (h *hasher) store(n node, db *Database, force bool) (node, error) {
 
 	if db != nil {
 		// We are pooling the trie nodes into an intermediate memory cache
-		hash := types.BytesToHash(hash)
+		hash := util.BytesToHash(hash)
 
 		db.lock.Lock()
 		db.insert(hash, h.tmp, n)

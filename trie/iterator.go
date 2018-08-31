@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common/rlp"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // Iterator is a key-value trie iterator that traverses a Trie.
@@ -296,7 +297,7 @@ func (st *nodeIteratorState) resolve(tr *Trie, path []byte) error {
 			return err
 		}
 		st.node = resolved
-		st.hash = types.BytesToHash(hash)
+		st.hash = util.BytesToHash(hash)
 	}
 	return nil
 }
@@ -310,7 +311,7 @@ func (it *nodeIterator) nextChild(parent *nodeIteratorState, ancestor types.Hash
 			if child != nil {
 				hash, _ := child.cache()
 				state := &nodeIteratorState{
-					hash:    types.BytesToHash(hash),
+					hash:    util.BytesToHash(hash),
 					node:    child,
 					parent:  ancestor,
 					index:   -1,
@@ -326,7 +327,7 @@ func (it *nodeIterator) nextChild(parent *nodeIteratorState, ancestor types.Hash
 		if parent.index < 0 {
 			hash, _ := node.Val.cache()
 			state := &nodeIteratorState{
-				hash:    types.BytesToHash(hash),
+				hash:    util.BytesToHash(hash),
 				node:    node.Val,
 				parent:  ancestor,
 				index:   -1,
@@ -362,7 +363,7 @@ func compareNodes(a, b NodeIterator) int {
 	} else if b.Leaf() && !a.Leaf() {
 		return 1
 	}
-	if cmp := bytes.Compare(a.Hash().Bytes(), b.Hash().Bytes()); cmp != 0 {
+	if cmp := bytes.Compare(util.HashToBytes(a.Hash()), util.HashToBytes(b.Hash())); cmp != 0 {
 		return cmp
 	}
 	if a.Leaf() && b.Leaf() {

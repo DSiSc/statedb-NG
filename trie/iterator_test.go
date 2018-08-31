@@ -25,6 +25,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 func TestIterator(t *testing.T) {
@@ -122,7 +123,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 		}
 	}
 	for _, key := range db.diskdb.(*ethdb.MemDatabase).Keys() {
-		if _, ok := hashes[types.BytesToHash(key)]; !ok {
+		if _, ok := hashes[util.BytesToHash(key)]; !ok {
 			t.Errorf("state entry not reported %x", key)
 		}
 	}
@@ -388,7 +389,7 @@ func testIteratorContinueAfterSeekError(t *testing.T, memonly bool) {
 	if !memonly {
 		triedb.Commit(root, true)
 	}
-	barNodeHash := types.HexToHash("05041990364eb72fcb1127652ce40d8bab765f2bfe53225b1170d276cc101c2e")
+	barNodeHash := util.HexToHash("05041990364eb72fcb1127652ce40d8bab765f2bfe53225b1170d276cc101c2e")
 	var (
 		barNodeBlob []byte
 		barNodeObj  *cachedNode

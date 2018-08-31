@@ -23,6 +23,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/trie"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // NodeIterator is an iterator to traverse the entire state trie post-order,
@@ -108,7 +109,7 @@ func (it *NodeIterator) step() error {
 	if err := rlp.Decode(bytes.NewReader(it.stateIt.LeafBlob()), &account); err != nil {
 		return err
 	}
-	dataTrie, err := it.state.db.OpenStorageTrie(types.BytesToHash(it.stateIt.LeafKey()), account.Root)
+	dataTrie, err := it.state.db.OpenStorageTrie(util.BytesToHash(it.stateIt.LeafKey()), account.Root)
 	if err != nil {
 		return err
 	}
@@ -117,9 +118,9 @@ func (it *NodeIterator) step() error {
 		it.dataIt = nil
 	}
 	if !bytes.Equal(account.CodeHash, emptyCodeHash) {
-		it.codeHash = types.BytesToHash(account.CodeHash)
-		addrHash := types.BytesToHash(it.stateIt.LeafKey())
-		it.code, err = it.state.db.ContractCode(addrHash, types.BytesToHash(account.CodeHash))
+		it.codeHash = util.BytesToHash(account.CodeHash)
+		addrHash := util.BytesToHash(it.stateIt.LeafKey())
+		it.code, err = it.state.db.ContractCode(addrHash, util.BytesToHash(account.CodeHash))
 		if err != nil {
 			return fmt.Errorf("code %x: %v", account.CodeHash, err)
 		}

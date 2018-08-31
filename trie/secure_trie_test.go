@@ -26,6 +26,7 @@ import (
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 func newEmptySecure() *SecureTrie {
@@ -85,7 +86,7 @@ func TestSecureDelete(t *testing.T) {
 		}
 	}
 	hash := trie.Hash()
-	exp := types.HexToHash("29b235a58c3c25ab83010c327d5932bcf05324b7d6b1185e650798034783ca9d")
+	exp := util.HexToHash("29b235a58c3c25ab83010c327d5932bcf05324b7d6b1185e650798034783ca9d")
 	if hash != exp {
 		t.Errorf("expected %x got %x", exp, hash)
 	}

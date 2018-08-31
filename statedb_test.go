@@ -33,6 +33,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	typeslog "github.com/DSiSc/statedb-NG/common/types"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // Tests that updating a state trie does not leak any database writes prior to
@@ -44,11 +45,11 @@ func TestUpdateLeaks(t *testing.T) {
 
 	// Update it with some accounts
 	for i := byte(0); i < 255; i++ {
-		addr := types.BytesToAddress([]byte{i})
+		addr := util.BytesToAddress([]byte{i})
 		state.AddBalance(addr, big.NewInt(int64(11*i)))
 		state.SetNonce(addr, uint64(42*i))
 		if i%2 == 0 {
-			state.SetState(addr, types.BytesToHash([]byte{i, i, i}), types.BytesToHash([]byte{i, i, i, i}))
+			state.SetState(addr, util.BytesToHash([]byte{i, i, i}), util.BytesToHash([]byte{i, i, i, i}))
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i})
@@ -125,7 +126,7 @@ func TestCopy(t *testing.T) {
 	orig, _ := New(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
 
 	for i := byte(0); i < 255; i++ {
-		obj := orig.GetOrNewStateObject(types.BytesToAddress([]byte{i}))
+		obj := orig.GetOrNewStateObject(util.BytesToAddress([]byte{i}))
 		obj.AddBalance(big.NewInt(int64(i)))
 		orig.updateStateObject(obj)
 	}
@@ -135,8 +136,8 @@ func TestCopy(t *testing.T) {
 	copy := orig.Copy()
 
 	for i := byte(0); i < 255; i++ {
-		origObj := orig.GetOrNewStateObject(types.BytesToAddress([]byte{i}))
-		copyObj := copy.GetOrNewStateObject(types.BytesToAddress([]byte{i}))
+		origObj := orig.GetOrNewStateObject(util.BytesToAddress([]byte{i}))
+		copyObj := copy.GetOrNewStateObject(util.BytesToAddress([]byte{i}))
 
 		origObj.AddBalance(big.NewInt(2 * int64(i)))
 		copyObj.AddBalance(big.NewInt(3 * int64(i)))
@@ -155,8 +156,8 @@ func TestCopy(t *testing.T) {
 
 	// Verify that the two states have been updated independently
 	for i := byte(0); i < 255; i++ {
-		origObj := orig.GetOrNewStateObject(types.BytesToAddress([]byte{i}))
-		copyObj := copy.GetOrNewStateObject(types.BytesToAddress([]byte{i}))
+		origObj := orig.GetOrNewStateObject(util.BytesToAddress([]byte{i}))
+		copyObj := copy.GetOrNewStateObject(util.BytesToAddress([]byte{i}))
 
 		if want := big.NewInt(3 * int64(i)); origObj.Balance().Cmp(want) != 0 {
 			t.Errorf("orig obj %d: balance mismatch: have %v, want %v", i, origObj.Balance(), want)
@@ -280,7 +281,7 @@ func newTestAction(addr types.Address, r *rand.Rand) testAction {
 	action := actions[r.Intn(len(actions))]
 	var nameargs []string
 	if !action.noAddr {
-		nameargs = append(nameargs, addr.Hex())
+		nameargs = append(nameargs, util.AddressToHex(addr))
 	}
 	for _, i := range action.args {
 		action.args[i] = rand.Int63n(100)
@@ -366,7 +367,7 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		var err error
 		checkeq := func(op string, a, b interface{}) bool {
 			if err == nil && !reflect.DeepEqual(a, b) {
-				err = fmt.Errorf("got %s(%s) == %v, want %v", op, addr.Hex(), a, b)
+				err = fmt.Errorf("got %s(%s) == %v, want %v", op, util.AddressToHex(addr), a, b)
 				return false
 			}
 			return true
@@ -382,10 +383,10 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		// Check storage.
 		if obj := state.getStateObject(addr); obj != nil {
 			state.ForEachStorage(addr, func(key, val types.Hash) bool {
-				return checkeq("GetState("+key.Hex()+")", val, checkstate.GetState(addr, key))
+				return checkeq("GetState("+util.HashToHex(key)+")", val, checkstate.GetState(addr, key))
 			})
 			checkstate.ForEachStorage(addr, func(key, checkval types.Hash) bool {
-				return checkeq("GetState("+key.Hex()+")", state.GetState(addr, key), checkval)
+				return checkeq("GetState("+util.HashToHex(key)+")", state.GetState(addr, key), checkval)
 			})
 		}
 		if err != nil {
@@ -425,7 +426,7 @@ func (s *StateSuite) TestTouchDelete(c *check.C) {
 // See https://github.com/DSiSc/statedb-NG/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
 	sdb, _ := New(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
-	addr := types.HexToAddress("aaaa")
+	addr := util.HexToAddress("aaaa")
 	sdb.SetBalance(addr, big.NewInt(42))
 
 	if got := sdb.Copy().GetBalance(addr).Uint64(); got != 42 {

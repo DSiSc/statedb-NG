@@ -22,6 +22,7 @@ import (
 
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -99,7 +100,7 @@ func (s *Sync) AddSubTrie(root types.Hash, depth int, parent types.Hash, callbac
 	if _, ok := s.membatch.batch[root]; ok {
 		return
 	}
-	key := root.Bytes()
+	key := util.HashToBytes(root)
 	blob, _ := s.database.Get(key)
 	if local, err := decodeNode(key, blob, 0); local != nil && err == nil {
 		return
@@ -134,7 +135,7 @@ func (s *Sync) AddRawEntry(hash types.Hash, depth int, parent types.Hash) {
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if ok, _ := s.database.Has(hash.Bytes()); ok {
+	if ok, _ := s.database.Has(util.HashToBytes(hash)); ok {
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -288,7 +289,7 @@ func (s *Sync) children(req *request, object node) ([]*request, error) {
 		// If the child references another node, resolve or schedule
 		if node, ok := (child.node).(hashNode); ok {
 			// Try to resolve the node from the local database
-			hash := types.BytesToHash(node)
+			hash := util.BytesToHash(node)
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}

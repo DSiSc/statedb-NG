@@ -21,9 +21,10 @@ import (
 
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
-var addr = types.BytesToAddress([]byte("test"))
+var addr = util.BytesToAddress([]byte("test"))
 
 func create() (*ManagedState, *account) {
 	statedb, _ := New(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()))

@@ -20,10 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/trie"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 type DumpAccount struct {
@@ -54,7 +54,7 @@ func (self *StateDB) RawDump() Dump {
 			panic(err)
 		}
 
-		obj := newObject(nil, types.BytesToAddress(addr), data)
+		obj := newObject(nil, util.BytesToAddress(addr), data)
 		account := DumpAccount{
 			Balance:  data.Balance.String(),
 			Nonce:    data.Nonce,

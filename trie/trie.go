@@ -25,11 +25,12 @@ import (
 	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/common/log"
 	"github.com/DSiSc/statedb-NG/metrics"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 var (
 	// emptyRoot is the known root hash of an empty trie.
-	emptyRoot = types.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+	emptyRoot = util.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 
 	// emptyState is the known hash of an empty state trie entry.
 	emptyState = crypto.Keccak256Hash(nil)
@@ -432,7 +433,7 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	cacheMissCounter.Inc(1)
 
-	hash := types.BytesToHash(n)
+	hash := util.BytesToHash(n)
 	if node := t.db.node(hash, t.cachegen); node != nil {
 		return node, nil
 	}
@@ -441,14 +442,14 @@ func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 
 // Root returns the root hash of the trie.
 // Deprecated: use Hash instead.
-func (t *Trie) Root() []byte { return t.Hash().Bytes() }
+func (t *Trie) Root() []byte { return util.HashToBytes(t.Hash()) }
 
 // Hash returns the root hash of the trie. It does not write to the
 // database and can be used even if the trie doesn't have one.
 func (t *Trie) Hash() types.Hash {
 	hash, cached, _ := t.hashRoot(nil, nil)
 	t.root = cached
-	return types.BytesToHash(hash.(hashNode))
+	return util.BytesToHash(hash.(hashNode))
 }
 
 // Commit writes all nodes to the trie's memory database, tracking the internal
@@ -463,12 +464,12 @@ func (t *Trie) Commit(onleaf LeafCallback) (root types.Hash, err error) {
 	}
 	t.root = cached
 	t.cachegen++
-	return types.BytesToHash(hash.(hashNode)), nil
+	return util.BytesToHash(hash.(hashNode)), nil
 }
 
 func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (node, node, error) {
 	if t.root == nil {
-		return hashNode(emptyRoot.Bytes()), nil, nil
+		return hashNode(util.HashToBytes(emptyRoot)), nil, nil
 	}
 	h := newHasher(t.cachegen, t.cachelimit, onleaf)
 	defer returnHasherToPool(h)

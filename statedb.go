@@ -30,6 +30,7 @@ import (
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	typeslog "github.com/DSiSc/statedb-NG/common/types"
 	"github.com/DSiSc/statedb-NG/trie"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 type revision struct {
@@ -222,7 +223,7 @@ func (self *StateDB) GetCodeSize(addr types.Address) int {
 	if stateObject.code != nil {
 		return len(stateObject.code)
 	}
-	size, err := self.db.ContractCodeSize(stateObject.addrHash, types.BytesToHash(stateObject.CodeHash()))
+	size, err := self.db.ContractCodeSize(stateObject.addrHash, util.BytesToHash(stateObject.CodeHash()))
 	if err != nil {
 		self.setError(err)
 	}
@@ -234,7 +235,7 @@ func (self *StateDB) GetCodeHash(addr types.Address) types.Hash {
 	if stateObject == nil {
 		return types.Hash{}
 	}
-	return types.BytesToHash(stateObject.CodeHash())
+	return util.BytesToHash(stateObject.CodeHash())
 }
 
 func (self *StateDB) GetState(addr types.Address, bhash types.Hash) types.Hash {
@@ -445,9 +446,9 @@ func (db *StateDB) ForEachStorage(addr types.Address, cb func(key, value types.H
 	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
 	for it.Next() {
 		// ignore cached values
-		key := types.BytesToHash(db.trie.GetKey(it.Key))
+		key := util.BytesToHash(db.trie.GetKey(it.Key))
 		if _, ok := so.cachedStorage[key]; !ok {
-			cb(key, types.BytesToHash(it.Value))
+			cb(key, util.BytesToHash(it.Value))
 		}
 	}
 }
@@ -597,7 +598,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root types.Hash, err error) {
 		case isDirty:
 			// Write any contract code associated with the state object
 			if stateObject.code != nil && stateObject.dirtyCode {
-				s.db.TrieDB().InsertBlob(types.BytesToHash(stateObject.CodeHash()), stateObject.code)
+				s.db.TrieDB().InsertBlob(util.BytesToHash(stateObject.CodeHash()), stateObject.code)
 				stateObject.dirtyCode = false
 			}
 			// Write any storage changes in the state object to its storage trie.
@@ -618,7 +619,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root types.Hash, err error) {
 		if account.Root != emptyState {
 			s.db.TrieDB().Reference(account.Root, parent)
 		}
-		code := types.BytesToHash(account.CodeHash)
+		code := util.BytesToHash(account.CodeHash)
 		if code != emptyCode {
 			s.db.TrieDB().Reference(code, parent)
 		}

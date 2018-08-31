@@ -24,6 +24,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 	checker "gopkg.in/check.v1"
 )
 
@@ -34,7 +35,7 @@ type StateSuite struct {
 
 var _ = checker.Suite(&StateSuite{})
 
-var toAddr = types.BytesToAddress
+var toAddr = util.BytesToAddress
 
 func (s *StateSuite) TestDump(c *checker.C) {
 	// generate a few entries
@@ -92,7 +93,7 @@ func (s *StateSuite) SetUpTest(c *checker.C) {
 }
 
 func (s *StateSuite) TestNull(c *checker.C) {
-	address := types.HexToAddress("0x823140710bf13990e4500136726d8b55")
+	address := util.HexToAddress("0x823140710bf13990e4500136726d8b55")
 	s.state.CreateAccount(address)
 	//value := common.FromHex("0x823140710bf13990e4500136726d8b55")
 	var value types.Hash
@@ -107,8 +108,8 @@ func (s *StateSuite) TestNull(c *checker.C) {
 func (s *StateSuite) TestSnapshot(c *checker.C) {
 	stateobjaddr := toAddr([]byte("aa"))
 	var storageaddr types.Hash
-	data1 := types.BytesToHash([]byte{42})
-	data2 := types.BytesToHash([]byte{43})
+	data1 := util.BytesToHash([]byte{42})
+	data2 := util.BytesToHash([]byte{43})
 
 	// set initial state object value
 	s.state.SetState(stateobjaddr, storageaddr, data1)
@@ -139,8 +140,8 @@ func TestSnapshot2(t *testing.T) {
 	stateobjaddr1 := toAddr([]byte("so1"))
 	var storageaddr types.Hash
 
-	data0 := types.BytesToHash([]byte{17})
-	data1 := types.BytesToHash([]byte{18})
+	data0 := util.BytesToHash([]byte{17})
+	data1 := util.BytesToHash([]byte{18})
 
 	state.SetState(stateobjaddr0, storageaddr, data0)
 	state.SetState(stateobjaddr1, storageaddr, data1)

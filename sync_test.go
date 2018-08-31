@@ -25,6 +25,7 @@ import (
 	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/ethdb"
 	"github.com/DSiSc/statedb-NG/trie"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // testAccount is the data associated with an account used by the state tests.
@@ -44,8 +45,8 @@ func makeTestState() (Database, types.Hash, []*testAccount) {
 	// Fill it with some arbitrary data
 	accounts := []*testAccount{}
 	for i := byte(0); i < 96; i++ {
-		obj := state.GetOrNewStateObject(types.BytesToAddress([]byte{i}))
-		acc := &testAccount{address: types.BytesToAddress([]byte{i})}
+		obj := state.GetOrNewStateObject(util.BytesToAddress([]byte{i}))
+		acc := &testAccount{address: util.BytesToAddress([]byte{i})}
 
 		obj.AddBalance(big.NewInt(int64(11 * i)))
 		acc.balance = big.NewInt(int64(11 * i))
@@ -108,7 +109,7 @@ func checkTrieConsistency(db ethdb.Database, root types.Hash) error {
 // checkStateConsistency checks that all data of a state root is present.
 func checkStateConsistency(db ethdb.Database, root types.Hash) error {
 	// Create and iterate a state trie rooted in a sub-node
-	if _, err := db.Get(root.Bytes()); err != nil {
+	if _, err := db.Get(util.HashToBytes(root)); err != nil {
 		return nil // Consider a non existent state consistent.
 	}
 	state, err := New(root, NewDatabase(db))
@@ -123,7 +124,7 @@ func checkStateConsistency(db ethdb.Database, root types.Hash) error {
 
 // Tests that an empty state is not scheduled for syncing.
 func TestEmptyStateSync(t *testing.T) {
-	empty := types.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+	empty := util.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 	if req := NewStateSync(empty, ethdb.NewMemDatabase()).Missing(1); len(req) != 0 {
 		t.Errorf("content requested for empty state: %v", req)
 	}
@@ -339,7 +340,7 @@ func TestIncompleteStateSync(t *testing.T) {
 	}
 	// Sanity check that removing any node from the database is detected
 	for _, node := range added[1:] {
-		key := node.Bytes()
+		key := util.HashToBytes(node)
 		value, _ := dstDb.Get(key)
 
 		dstDb.Delete(key)

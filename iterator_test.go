@@ -22,6 +22,7 @@ import (
 
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.
@@ -55,7 +56,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 		if bytes.HasPrefix(key, []byte("secure-key-")) {
 			continue
 		}
-		if _, ok := hashes[types.BytesToHash(key)]; !ok {
+		if _, ok := hashes[util.BytesToHash(key)]; !ok {
 			t.Errorf("state entry not reported %x", key)
 		}
 	}

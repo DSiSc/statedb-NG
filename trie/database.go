@@ -28,6 +28,7 @@ import (
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/ethdb"
 	"github.com/DSiSc/statedb-NG/metrics"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 var (
@@ -189,7 +190,7 @@ func gatherChildren(n node, children *[]types.Hash) {
 			gatherChildren(n[i], children)
 		}
 	case hashNode:
-		*children = append(*children, types.BytesToHash(n))
+		*children = append(*children, util.BytesToHash(n))
 
 	case valueNode, nil:
 

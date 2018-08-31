@@ -33,6 +33,7 @@ import (
 	"github.com/DSiSc/statedb-NG/common/crypto/sha3"
 	"github.com/DSiSc/statedb-NG/common/math"
 	"github.com/DSiSc/statedb-NG/common/rlp"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 var (
@@ -74,7 +75,7 @@ func Keccak512(data ...[]byte) []byte {
 // CreateAddress creates an ethereum address given the bytes and the nonce
 func CreateAddress(b types.Address, nonce uint64) types.Address {
 	data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
-	return types.BytesToAddress(Keccak256(data)[12:])
+	return util.BytesToAddress(Keccak256(data)[12:])
 }
 
 // ToECDSA creates a private key with the given D value.
@@ -197,7 +198,7 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 
 func PubkeyToAddress(p ecdsa.PublicKey) types.Address {
 	pubBytes := FromECDSAPub(&p)
-	return types.BytesToAddress(Keccak256(pubBytes[1:])[12:])
+	return util.BytesToAddress(Keccak256(pubBytes[1:])[12:])
 }
 
 func zeroBytes(bytes []byte) {

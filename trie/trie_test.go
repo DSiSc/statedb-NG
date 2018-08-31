@@ -34,6 +34,7 @@ import (
 	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/util"
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -68,7 +69,7 @@ func TestNull(t *testing.T) {
 }
 
 func TestMissingRoot(t *testing.T) {
-	trie, err := New(types.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(ethdb.NewMemDatabase()))
+	trie, err := New(util.HexToHash("0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"), NewDatabase(ethdb.NewMemDatabase()))
 	if trie != nil {
 		t.Error("New returned non-nil trie for invalid root")
 	}
@@ -118,7 +119,7 @@ func testMissingNode(t *testing.T, memonly bool) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	hash := types.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9")
+	hash := util.HexToHash("0xe1d943cc8f061a0c0b98162830b970395ac9315654824bf21b73b891365262f9")
 	if memonly {
 		delete(triedb.nodes, hash)
 	} else {
@@ -159,7 +160,7 @@ func TestInsert(t *testing.T) {
 	updateString(trie, "dog", "puppy")
 	updateString(trie, "dogglesworth", "cat")
 
-	exp := types.HexToHash("8aad789dff2f538bca5d8ea56e8abe10f4c7ba3a5dea95fea4cd6e7c3a1168d3")
+	exp := util.HexToHash("8aad789dff2f538bca5d8ea56e8abe10f4c7ba3a5dea95fea4cd6e7c3a1168d3")
 	root := trie.Hash()
 	if root != exp {
 		t.Errorf("exp %x got %x", exp, root)
@@ -168,7 +169,7 @@ func TestInsert(t *testing.T) {
 	trie = newEmpty()
 	updateString(trie, "A", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
-	exp = types.HexToHash("d23786fb4a010da3ce639d66d5e904a11dbc02746d1ce25029e53290cabf28ab")
+	exp = util.HexToHash("d23786fb4a010da3ce639d66d5e904a11dbc02746d1ce25029e53290cabf28ab")
 	root, err := trie.Commit(nil)
 	if err != nil {
 		t.Fatalf("commit error: %v", err)
@@ -223,7 +224,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	hash := trie.Hash()
-	exp := types.HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
+	exp := util.HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
 	if hash != exp {
 		t.Errorf("expected %x got %x", exp, hash)
 	}
@@ -247,7 +248,7 @@ func TestEmptyValues(t *testing.T) {
 	}
 
 	hash := trie.Hash()
-	exp := types.HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
+	exp := util.HexToHash("5991bb8c6514148a29db676a14ac506cd2cd5775ace63c30a4fe457715e9ac84")
 	if hash != exp {
 		t.Errorf("expected %x got %x", exp, hash)
 	}

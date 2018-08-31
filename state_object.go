@@ -25,6 +25,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/common/rlp"
+	"github.com/DSiSc/statedb-NG/util"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -176,7 +177,11 @@ func (self *stateObject) GetState(db Database, key types.Hash) types.Hash {
 		if err != nil {
 			self.setError(err)
 		}
-		value.SetBytes(content)
+
+		if len(content) > len(value) {
+			content = content[len(content)-util.HashLength:]
+		}
+		copy(value[util.HashLength-len(content):], content)
 	}
 	self.cachedStorage[key] = value
 	return value
@@ -303,7 +308,7 @@ func (self *stateObject) Code(db Database) []byte {
 	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
 		return nil
 	}
-	code, err := db.ContractCode(self.addrHash, types.BytesToHash(self.CodeHash()))
+	code, err := db.ContractCode(self.addrHash, util.BytesToHash(self.CodeHash()))
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
