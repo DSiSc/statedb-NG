@@ -24,8 +24,8 @@ import (
 	"sync"
 
 	"github.com/DSiSc/craft/types"
+	"github.com/DSiSc/crypto-suite/crypto"
 	"github.com/DSiSc/statedb-NG/common"
-	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/common/log"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	typeslog "github.com/DSiSc/statedb-NG/common/types"

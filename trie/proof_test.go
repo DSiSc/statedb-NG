@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DSiSc/crypto-suite/crypto"
 	"github.com/DSiSc/statedb-NG/common"
-	"github.com/DSiSc/statedb-NG/common/crypto"
 	"github.com/DSiSc/statedb-NG/ethdb"
 )
 

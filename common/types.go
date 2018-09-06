@@ -25,7 +25,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/DSiSc/statedb-NG/common/crypto/sha3"
+	"github.com/DSiSc/crypto-suite/crypto/sha3"
 	"github.com/DSiSc/statedb-NG/common/hexutil"
 )
 

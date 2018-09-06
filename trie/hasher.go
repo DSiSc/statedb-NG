@@ -20,8 +20,8 @@ import (
 	"hash"
 	"sync"
 
+	"github.com/DSiSc/crypto-suite/crypto/sha3"
 	"github.com/DSiSc/statedb-NG/common"
-	"github.com/DSiSc/statedb-NG/common/crypto/sha3"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/util"
 )

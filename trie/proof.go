@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/DSiSc/craft/types"
-	"github.com/DSiSc/statedb-NG/common/crypto"
+	"github.com/DSiSc/crypto-suite/crypto"
 	"github.com/DSiSc/statedb-NG/common/log"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/ethdb"
