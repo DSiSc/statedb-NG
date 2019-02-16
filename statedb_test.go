@@ -31,7 +31,6 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/DSiSc/craft/types"
-	typeslog "github.com/DSiSc/statedb-NG/common/types"
 	"github.com/DSiSc/statedb-NG/ethdb"
 	"github.com/DSiSc/statedb-NG/util"
 )
@@ -273,7 +272,7 @@ func newTestAction(addr types.Address, r *rand.Rand) testAction {
 			fn: func(a testAction, s *StateDB) {
 				data := make([]byte, 2)
 				binary.BigEndian.PutUint16(data, uint16(a.args[0]))
-				s.AddLog(&typeslog.Log{Address: addr, Data: data})
+				s.AddLog(&types.Log{Address: addr, Data: data})
 			},
 			args: make([]int64, 1),
 		},

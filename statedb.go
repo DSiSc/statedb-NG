@@ -28,7 +28,6 @@ import (
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/common/log"
 	"github.com/DSiSc/statedb-NG/common/rlp"
-	typeslog "github.com/DSiSc/statedb-NG/common/types"
 	"github.com/DSiSc/statedb-NG/trie"
 	"github.com/DSiSc/statedb-NG/util"
 )
@@ -71,7 +70,7 @@ type StateDB struct {
 
 	thash, bhash types.Hash
 	txIndex      int
-	logs         map[types.Hash][]*typeslog.Log
+	logs         map[types.Hash][]*types.Log
 	logSize      uint
 
 	preimages map[types.Hash][]byte
@@ -96,7 +95,7 @@ func New(root types.Hash, db Database) (*StateDB, error) {
 		trie:              tr,
 		stateObjects:      make(map[types.Address]*stateObject),
 		stateObjectsDirty: make(map[types.Address]struct{}),
-		logs:              make(map[types.Hash][]*typeslog.Log),
+		logs:              make(map[types.Hash][]*types.Log),
 		preimages:         make(map[types.Hash][]byte),
 		journal:           newJournal(),
 	}, nil
@@ -126,14 +125,14 @@ func (self *StateDB) Reset(root types.Hash) error {
 	self.thash = types.Hash{}
 	self.bhash = types.Hash{}
 	self.txIndex = 0
-	self.logs = make(map[types.Hash][]*typeslog.Log)
+	self.logs = make(map[types.Hash][]*types.Log)
 	self.logSize = 0
 	self.preimages = make(map[types.Hash][]byte)
 	self.clearJournalAndRefund()
 	return nil
 }
 
-func (self *StateDB) AddLog(log *typeslog.Log) {
+func (self *StateDB) AddLog(log *types.Log) {
 	self.journal.append(addLogChange{txhash: self.thash})
 
 	log.TxHash = self.thash
@@ -144,12 +143,12 @@ func (self *StateDB) AddLog(log *typeslog.Log) {
 	self.logSize++
 }
 
-func (self *StateDB) GetLogs(hash types.Hash) []*typeslog.Log {
+func (self *StateDB) GetLogs(hash types.Hash) []*types.Log {
 	return self.logs[hash]
 }
 
-func (self *StateDB) Logs() []*typeslog.Log {
-	var logs []*typeslog.Log
+func (self *StateDB) Logs() []*types.Log {
+	var logs []*types.Log
 	for _, lgs := range self.logs {
 		logs = append(logs, lgs...)
 	}
@@ -466,7 +465,7 @@ func (self *StateDB) Copy() *StateDB {
 		stateObjects:      make(map[types.Address]*stateObject, len(self.journal.dirties)),
 		stateObjectsDirty: make(map[types.Address]struct{}, len(self.journal.dirties)),
 		refund:            self.refund,
-		logs:              make(map[types.Hash][]*typeslog.Log, len(self.logs)),
+		logs:              make(map[types.Hash][]*types.Log, len(self.logs)),
 		logSize:           self.logSize,
 		preimages:         make(map[types.Hash][]byte),
 		journal:           newJournal(),
@@ -493,7 +492,7 @@ func (self *StateDB) Copy() *StateDB {
 	}
 
 	for hash, logs := range self.logs {
-		state.logs[hash] = make([]*typeslog.Log, len(logs))
+		state.logs[hash] = make([]*types.Log, len(logs))
 		copy(state.logs[hash], logs)
 	}
 	for hash, preimage := range self.preimages {
