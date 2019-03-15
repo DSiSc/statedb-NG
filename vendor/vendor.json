@@ -3,6 +3,18 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "8skJYOdQytXjimcDPLRW4tonX3A=",
+			"path": "github.com/allegro/bigcache",
+			"revision": "e24eb225f15679bbe54f91bfa7da3b00e59b9768",
+			"revisionTime": "2019-02-18T06:46:05Z"
+		},
+		{
+			"checksumSHA1": "vtT7NcYLatJmxVQQEeSESyrgVg0=",
+			"path": "github.com/allegro/bigcache/queue",
+			"revision": "e24eb225f15679bbe54f91bfa7da3b00e59b9768",
+			"revisionTime": "2019-02-18T06:46:05Z"
+		},
+		{
 			"checksumSHA1": "yhw0ffGLzAQ2NEhhfZww02b60iw=",
 			"path": "github.com/btcsuite/btcd/btcec",
 			"revision": "79e00513b1011888b1e675157ab89f527f901cae",
@@ -139,6 +151,12 @@
 			"path": "github.com/syndtr/goleveldb/leveldb/util",
 			"revision": "ae2bd5eed72d46b28834ec3f60db3a3ebedd8dbd",
 			"revisionTime": "2018-08-15T03:29:40Z"
+		},
+		{
+			"checksumSHA1": "LN1V2pZQwKnoDwcsgXpzG4+Vges=",
+			"path": "golang.org/x/crypto/sha3",
+			"revision": "c126467f60eb25f8f27e5a981f32a87e3965053f",
+			"revisionTime": "2018-07-23T15:26:11Z"
 		},
 		{
 			"path": "golang.org/x/sys/unix",

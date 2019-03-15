@@ -21,9 +21,9 @@ import (
 	"fmt"
 
 	"github.com/DSiSc/craft/types"
+	"github.com/DSiSc/statedb-NG/common/prque"
 	"github.com/DSiSc/statedb-NG/ethdb"
 	"github.com/DSiSc/statedb-NG/util"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a
@@ -73,19 +73,19 @@ func newSyncMemBatch() *syncMemBatch {
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type Sync struct {
-	database DatabaseReader          // Persistent database to check for existing entries
-	membatch *syncMemBatch           // Memory buffer to avoid frequest database writes
+	database ethdb.Reader            // Persistent database to check for existing entries
+	membatch *syncMemBatch           // Memory buffer to avoid frequent database writes
 	requests map[types.Hash]*request // Pending requests pertaining to a key hash
 	queue    *prque.Prque            // Priority queue with the pending requests
 }
 
 // NewSync creates a new trie data download scheduler.
-func NewSync(root types.Hash, database DatabaseReader, callback LeafCallback) *Sync {
+func NewSync(root types.Hash, database ethdb.Reader, callback LeafCallback) *Sync {
 	ts := &Sync{
 		database: database,
 		membatch: newSyncMemBatch(),
 		requests: make(map[types.Hash]*request),
-		queue:    prque.New(),
+		queue:    prque.New(nil),
 	}
 	ts.AddSubTrie(root, 0, types.Hash{}, callback)
 	return ts
@@ -100,9 +100,9 @@ func (s *Sync) AddSubTrie(root types.Hash, depth int, parent types.Hash, callbac
 	if _, ok := s.membatch.batch[root]; ok {
 		return
 	}
-	key := util.HashToBytes(root)
+	key := root[:]
 	blob, _ := s.database.Get(key)
-	if local, err := decodeNode(key, blob, 0); local != nil && err == nil {
+	if local, err := decodeNode(key, blob); local != nil && err == nil {
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -135,7 +135,7 @@ func (s *Sync) AddRawEntry(hash types.Hash, depth int, parent types.Hash) {
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if ok, _ := s.database.Has(util.HashToBytes(hash)); ok {
+	if ok, _ := s.database.Has(hash[:]); ok {
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -158,7 +158,7 @@ func (s *Sync) AddRawEntry(hash types.Hash, depth int, parent types.Hash) {
 
 // Missing retrieves the known missing nodes from the trie for retrieval.
 func (s *Sync) Missing(max int) []types.Hash {
-	requests := []types.Hash{}
+	var requests []types.Hash
 	for !s.queue.Empty() && (max == 0 || len(requests) < max) {
 		requests = append(requests, s.queue.PopItem().(types.Hash))
 	}
@@ -188,7 +188,7 @@ func (s *Sync) Process(results []SyncResult) (bool, int, error) {
 			continue
 		}
 		// Decode the node data content and update the request
-		node, err := decodeNode(item.Hash[:], item.Data, 0)
+		node, err := decodeNode(item.Hash[:], item.Data)
 		if err != nil {
 			return committed, i, err
 		}
@@ -214,7 +214,7 @@ func (s *Sync) Process(results []SyncResult) (bool, int, error) {
 
 // Commit flushes the data stored in the internal membatch out to persistent
 // storage, returning the number of items written and any occurred error.
-func (s *Sync) Commit(dbw ethdb.Putter) (int, error) {
+func (s *Sync) Commit(dbw ethdb.Writer) (int, error) {
 	// Dump the membatch into a database dbw
 	for i, key := range s.membatch.order {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
@@ -243,7 +243,7 @@ func (s *Sync) schedule(req *request) {
 		return
 	}
 	// Schedule the request for future retrieval
-	s.queue.Push(req.hash, float32(req.depth))
+	s.queue.Push(req.hash, int64(req.depth))
 	s.requests[req.hash] = req
 }
 
@@ -255,7 +255,7 @@ func (s *Sync) children(req *request, object node) ([]*request, error) {
 		node  node
 		depth int
 	}
-	children := []child{}
+	var children []child
 
 	switch node := (object).(type) {
 	case *shortNode:

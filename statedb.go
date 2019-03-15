@@ -18,18 +18,17 @@
 package statedb
 
 import (
+	"errors"
 	"fmt"
-	"math/big"
-	"sort"
-	"sync"
-
+	"github.com/DSiSc/craft/log"
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/crypto-suite/crypto"
 	"github.com/DSiSc/statedb-NG/common"
-	"github.com/DSiSc/statedb-NG/common/log"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/trie"
 	"github.com/DSiSc/statedb-NG/util"
+	"math/big"
+	"sort"
 )
 
 type revision struct {
@@ -38,12 +37,19 @@ type revision struct {
 }
 
 var (
-	// emptyState is the known hash of an empty state trie entry.
-	emptyState = crypto.Keccak256Hash(nil)
+	// emptyRoot is the known root hash of an empty trie.
+	emptyRoot = util.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 
 	// emptyCode is the known hash of the empty EVM bytecode.
 	emptyCode = crypto.Keccak256Hash(nil)
 )
+
+type proofList [][]byte
+
+func (n *proofList) Put(key []byte, value []byte) error {
+	*n = append(*n, value)
+	return nil
+}
 
 // StateDBs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
@@ -80,8 +86,6 @@ type StateDB struct {
 	journal        *journal
 	validRevisions []revision
 	nextRevisionId int
-
-	lock sync.Mutex
 }
 
 // Create a new state from a given trie.
@@ -170,9 +174,20 @@ func (self *StateDB) Preimages() map[types.Hash][]byte {
 	return self.preimages
 }
 
+// AddRefund adds gas to the refund counter
 func (self *StateDB) AddRefund(gas uint64) {
 	self.journal.append(refundChange{prev: self.refund})
 	self.refund += gas
+}
+
+// SubRefund removes gas from the refund counter.
+// This method will panic if the refund counter goes below zero
+func (self *StateDB) SubRefund(gas uint64) {
+	self.journal.append(refundChange{prev: self.refund})
+	if gas > self.refund {
+		panic("Refund counter below zero")
+	}
+	self.refund -= gas
 }
 
 // Exist reports whether the given account address exists in the state.
@@ -237,10 +252,38 @@ func (self *StateDB) GetCodeHash(addr types.Address) types.Hash {
 	return util.BytesToHash(stateObject.CodeHash())
 }
 
-func (self *StateDB) GetState(addr types.Address, bhash types.Hash) types.Hash {
+// GetState retrieves a value from the given account's storage trie.
+func (self *StateDB) GetState(addr types.Address, hash types.Hash) types.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.GetState(self.db, bhash)
+		return stateObject.GetState(self.db, hash)
+	}
+	return types.Hash{}
+}
+
+// GetProof returns the MerkleProof for a given Account
+func (self *StateDB) GetProof(a types.Address) ([][]byte, error) {
+	var proof proofList
+	err := self.trie.Prove(crypto.Keccak256(a[:]), 0, &proof)
+	return [][]byte(proof), err
+}
+
+// GetProof returns the StorageProof for given key
+func (self *StateDB) GetStorageProof(a types.Address, key types.Hash) ([][]byte, error) {
+	var proof proofList
+	trie := self.StorageTrie(a)
+	if trie == nil {
+		return proof, errors.New("storage trie for requested address does not exist")
+	}
+	err := trie.Prove(crypto.Keccak256(key[:]), 0, &proof)
+	return [][]byte(proof), err
+}
+
+// GetCommittedState retrieves a value from the given account's committed storage trie.
+func (self *StateDB) GetCommittedState(addr types.Address, hash types.Hash) types.Hash {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetCommittedState(self.db, hash)
 	}
 	return types.Hash{}
 }
@@ -425,9 +468,9 @@ func (self *StateDB) createObject(addr types.Address) (newobj, prev *stateObject
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr types.Address) {
-	new, prev := self.createObject(addr)
+	newObj, prev := self.createObject(addr)
 	if prev != nil {
-		new.setBalance(prev.data.Balance)
+		newObj.setBalance(prev.data.Balance)
 	}
 }
 
@@ -436,28 +479,20 @@ func (db *StateDB) ForEachStorage(addr types.Address, cb func(key, value types.H
 	if so == nil {
 		return
 	}
-
-	// When iterating over the storage check the cache first
-	for h, value := range so.cachedStorage {
-		cb(h, value)
-	}
-
 	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
 	for it.Next() {
-		// ignore cached values
 		key := util.BytesToHash(db.trie.GetKey(it.Key))
-		if _, ok := so.cachedStorage[key]; !ok {
-			cb(key, util.BytesToHash(it.Value))
+		if value, dirty := so.dirtyStorage[key]; dirty {
+			cb(key, value)
+			continue
 		}
+		cb(key, util.BytesToHash(it.Value))
 	}
 }
 
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (self *StateDB) Copy() *StateDB {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
 		db:                self.db,
@@ -467,12 +502,12 @@ func (self *StateDB) Copy() *StateDB {
 		refund:            self.refund,
 		logs:              make(map[types.Hash][]*types.Log, len(self.logs)),
 		logSize:           self.logSize,
-		preimages:         make(map[types.Hash][]byte),
+		preimages:         make(map[types.Hash][]byte, len(self.preimages)),
 		journal:           newJournal(),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
-		// As documented [here](https://github.com/DSiSc/statedb-NG/pull/16485#issuecomment-380438527),
+		// As documented [here](https://github.com/ethereum/go-ethereum/pull/16485#issuecomment-380438527),
 		// and in the Finalise-method, there is a case where an object is in the journal but not
 		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
 		// nil
@@ -490,10 +525,13 @@ func (self *StateDB) Copy() *StateDB {
 			state.stateObjectsDirty[addr] = struct{}{}
 		}
 	}
-
 	for hash, logs := range self.logs {
-		state.logs[hash] = make([]*types.Log, len(logs))
-		copy(state.logs[hash], logs)
+		cpy := make([]*types.Log, len(logs))
+		for i, l := range logs {
+			cpy[i] = new(types.Log)
+			*cpy[i] = *l
+		}
+		state.logs[hash] = cpy
 	}
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage
@@ -615,7 +653,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root types.Hash, err error) {
 		if err := rlp.DecodeBytes(leaf, &account); err != nil {
 			return nil
 		}
-		if account.Root != emptyState {
+		if account.Root != emptyRoot {
 			s.db.TrieDB().Reference(account.Root, parent)
 		}
 		code := util.BytesToHash(account.CodeHash)
@@ -624,6 +662,5 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root types.Hash, err error) {
 		}
 		return nil
 	})
-	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
 }

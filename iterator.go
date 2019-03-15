@@ -19,7 +19,6 @@ package statedb
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/trie"

@@ -28,18 +28,17 @@ import (
 	"testing"
 	"testing/quick"
 
-	"gopkg.in/check.v1"
-
 	"github.com/DSiSc/craft/types"
-	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/rawdb"
 	"github.com/DSiSc/statedb-NG/util"
+	check "gopkg.in/check.v1"
 )
 
 // Tests that updating a state trie does not leak any database writes prior to
 // actually committing the state.
 func TestUpdateLeaks(t *testing.T) {
 	// Create an empty state database
-	db := ethdb.NewMemDatabase()
+	db := rawdb.NewMemoryDatabase()
 	state, _ := New(types.Hash{}, NewDatabase(db))
 
 	// Update it with some accounts
@@ -56,18 +55,19 @@ func TestUpdateLeaks(t *testing.T) {
 		state.IntermediateRoot(false)
 	}
 	// Ensure that no data was leaked into the database
-	for _, key := range db.Keys() {
-		value, _ := db.Get(key)
-		t.Errorf("State leaked into database: %x -> %x", key, value)
+	it := db.NewIterator()
+	for it.Next() {
+		t.Errorf("State leaked into database: %x -> %x", it.Key(), it.Value())
 	}
+	it.Release()
 }
 
 // Tests that no intermediate state of an object is stored into the database,
 // only the one right before the commit.
 func TestIntermediateLeaks(t *testing.T) {
 	// Create two state databases, one transitioning to the final state, the other final from the beginning
-	transDb := ethdb.NewMemDatabase()
-	finalDb := ethdb.NewMemDatabase()
+	transDb := rawdb.NewMemoryDatabase()
+	finalDb := rawdb.NewMemoryDatabase()
 	transState, _ := New(types.Hash{}, NewDatabase(transDb))
 	finalState, _ := New(types.Hash{}, NewDatabase(finalDb))
 
@@ -103,26 +103,30 @@ func TestIntermediateLeaks(t *testing.T) {
 	if _, err := finalState.Commit(false); err != nil {
 		t.Fatalf("failed to commit final state: %v", err)
 	}
-	for _, key := range finalDb.Keys() {
+	it := finalDb.NewIterator()
+	for it.Next() {
+		key := it.Key()
 		if _, err := transDb.Get(key); err != nil {
-			val, _ := finalDb.Get(key)
-			t.Errorf("entry missing from the transition database: %x -> %x", key, val)
+			t.Errorf("entry missing from the transition database: %x -> %x", key, it.Value())
 		}
 	}
-	for _, key := range transDb.Keys() {
+	it.Release()
+
+	it = transDb.NewIterator()
+	for it.Next() {
+		key := it.Key()
 		if _, err := finalDb.Get(key); err != nil {
-			val, _ := transDb.Get(key)
-			t.Errorf("extra entry in the transition database: %x -> %x", key, val)
+			t.Errorf("extra entry in the transition database: %x -> %x", key, it.Value())
 		}
 	}
 }
 
 // TestCopy tests that copying a statedb object indeed makes the original and
 // the copy independent of each other. This test is a regression test against
-// https://github.com/DSiSc/statedb-NG/pull/15549.
+// https://github.com/ethereum/go-ethereum/pull/15549.
 func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
-	orig, _ := New(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
+	orig, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
 
 	for i := byte(0); i < 255; i++ {
 		obj := orig.GetOrNewStateObject(util.BytesToAddress([]byte{i}))
@@ -276,6 +280,15 @@ func newTestAction(addr types.Address, r *rand.Rand) testAction {
 			},
 			args: make([]int64, 1),
 		},
+		{
+			name: "AddPreimage",
+			fn: func(a testAction, s *StateDB) {
+				preimage := []byte{1}
+				hash := util.BytesToHash(preimage)
+				s.AddPreimage(hash, preimage)
+			},
+			args: make([]int64, 1),
+		},
 	}
 	action := actions[r.Intn(len(actions))]
 	var nameargs []string
@@ -333,7 +346,7 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		state, _     = New(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
+		state, _     = New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -381,11 +394,11 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		checkeq("GetCodeSize", state.GetCodeSize(addr), checkstate.GetCodeSize(addr))
 		// Check storage.
 		if obj := state.getStateObject(addr); obj != nil {
-			state.ForEachStorage(addr, func(key, val types.Hash) bool {
-				return checkeq("GetState("+util.HashToHex(key)+")", val, checkstate.GetState(addr, key))
+			state.ForEachStorage(addr, func(key, value types.Hash) bool {
+				return checkeq("GetState("+util.AddressToHex(addr)+")", checkstate.GetState(addr, key), value)
 			})
-			checkstate.ForEachStorage(addr, func(key, checkval types.Hash) bool {
-				return checkeq("GetState("+util.HashToHex(key)+")", state.GetState(addr, key), checkval)
+			checkstate.ForEachStorage(addr, func(key, value types.Hash) bool {
+				return checkeq("GetState("+util.AddressToHex(addr)+")", checkstate.GetState(addr, key), value)
 			})
 		}
 		if err != nil {
@@ -422,9 +435,9 @@ func (s *StateSuite) TestTouchDelete(c *check.C) {
 }
 
 // TestCopyOfCopy tests that modified objects are carried over to the copy, and the copy of the copy.
-// See https://github.com/DSiSc/statedb-NG/pull/15225#issuecomment-380191512
+// See https://github.com/ethereum/go-ethereum/pull/15225#issuecomment-380191512
 func TestCopyOfCopy(t *testing.T) {
-	sdb, _ := New(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
+	sdb, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
 	addr := util.HexToAddress("aaaa")
 	sdb.SetBalance(addr, big.NewInt(42))
 

@@ -24,6 +24,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/crypto-suite/crypto"
 	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/ethdb/memorydb"
 	"github.com/DSiSc/statedb-NG/trie"
 	"github.com/DSiSc/statedb-NG/util"
 )
@@ -39,7 +40,7 @@ type testAccount struct {
 // makeTestState create a sample test state to test node-wise reconstruction.
 func makeTestState() (Database, types.Hash, []*testAccount) {
 	// Create an empty state
-	db := NewDatabase(ethdb.NewMemDatabase())
+	db := NewDatabase(memorydb.New())
 	state, _ := New(types.Hash{}, db)
 
 	// Fill it with some arbitrary data
@@ -140,7 +141,7 @@ func testIterativeStateSync(t *testing.T, batch int) {
 	srcDb, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb := ethdb.NewMemDatabase()
+	dstDb := memorydb.New()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := append([]types.Hash{}, sched.Missing(batch)...)
@@ -172,7 +173,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	srcDb, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb := ethdb.NewMemDatabase()
+	dstDb := memorydb.New()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := append([]types.Hash{}, sched.Missing(0)...)
@@ -209,7 +210,7 @@ func testIterativeRandomStateSync(t *testing.T, batch int) {
 	srcDb, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb := ethdb.NewMemDatabase()
+	dstDb := memorydb.New()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := make(map[types.Hash]struct{})
@@ -249,7 +250,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	srcDb, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb := ethdb.NewMemDatabase()
+	dstDb := memorydb.New()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := make(map[types.Hash]struct{})
@@ -296,7 +297,7 @@ func TestIncompleteStateSync(t *testing.T) {
 	checkTrieConsistency(srcDb.TrieDB().DiskDB().(ethdb.Database), srcRoot)
 
 	// Create a destination state and sync with the scheduler
-	dstDb := ethdb.NewMemDatabase()
+	dstDb := memorydb.New()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	added := []types.Hash{}

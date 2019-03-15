@@ -180,7 +180,9 @@ func (it *nodeIterator) LeafBlob() []byte {
 func (it *nodeIterator) LeafProof() [][]byte {
 	if len(it.stack) > 0 {
 		if _, ok := it.stack[len(it.stack)-1].node.(valueNode); ok {
-			hasher := newHasher(0, 0, nil)
+			hasher := newHasher(nil)
+			defer returnHasherToPool(hasher)
+
 			proofs := make([][]byte, 0, len(it.stack))
 
 			for i, item := range it.stack[:len(it.stack)-1] {
@@ -363,7 +365,9 @@ func compareNodes(a, b NodeIterator) int {
 	} else if b.Leaf() && !a.Leaf() {
 		return 1
 	}
-	if cmp := bytes.Compare(util.HashToBytes(a.Hash()), util.HashToBytes(b.Hash())); cmp != 0 {
+	aHash := a.Hash()
+	bHash := b.Hash()
+	if cmp := bytes.Compare(aHash[:], bHash[:]); cmp != 0 {
 		return cmp
 	}
 	if a.Leaf() && b.Leaf() {

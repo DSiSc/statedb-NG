@@ -17,10 +17,9 @@
 package statedb
 
 import (
-	"math/big"
-
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/util"
+	"math/big"
 )
 
 // journalEntry is a modification entry in the state change journal that can be

@@ -20,14 +20,14 @@ import (
 	"testing"
 
 	"github.com/DSiSc/craft/types"
-	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/rawdb"
 	"github.com/DSiSc/statedb-NG/util"
 )
 
 var addr = util.BytesToAddress([]byte("test"))
 
 func create() (*ManagedState, *account) {
-	statedb, _ := New(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()))
+	statedb, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
 	ms := ManageState(statedb)
 	ms.StateDB.SetNonce(addr, 100)
 	ms.accounts[addr] = newAccount(ms.StateDB.getStateObject(addr))

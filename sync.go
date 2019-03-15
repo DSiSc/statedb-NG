@@ -21,12 +21,13 @@ import (
 
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/common/rlp"
+	"github.com/DSiSc/statedb-NG/ethdb"
 	"github.com/DSiSc/statedb-NG/trie"
 	"github.com/DSiSc/statedb-NG/util"
 )
 
 // NewStateSync create a new state trie download scheduler.
-func NewStateSync(root types.Hash, database trie.DatabaseReader) *trie.Sync {
+func NewStateSync(root types.Hash, database ethdb.Reader) *trie.Sync {
 	var syncer *trie.Sync
 	callback := func(leaf []byte, parent types.Hash) error {
 		var obj Account

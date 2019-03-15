@@ -19,7 +19,6 @@ package statedb
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/trie"

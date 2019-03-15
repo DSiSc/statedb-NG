@@ -18,28 +18,26 @@ package trie
 
 import (
 	"bytes"
-	"runtime"
-	"sync"
-	"testing"
-
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/crypto-suite/crypto"
 	"github.com/DSiSc/statedb-NG/common"
-	"github.com/DSiSc/statedb-NG/ethdb"
+	"github.com/DSiSc/statedb-NG/ethdb/memorydb"
 	"github.com/DSiSc/statedb-NG/util"
+	"runtime"
+	"sync"
+	"testing"
 )
 
 func newEmptySecure() *SecureTrie {
-	trie, _ := NewSecure(types.Hash{}, NewDatabase(ethdb.NewMemDatabase()), 0)
+	trie, _ := NewSecure(types.Hash{}, NewDatabase(memorydb.New()))
 	return trie
 }
 
 // makeTestSecureTrie creates a large enough secure trie for testing.
 func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
-	triedb := NewDatabase(ethdb.NewMemDatabase())
-
-	trie, _ := NewSecure(types.Hash{}, triedb, 0)
+	triedb := NewDatabase(memorydb.New())
+	trie, _ := NewSecure(types.Hash{}, triedb)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)

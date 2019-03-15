@@ -18,9 +18,8 @@ package ethdb
 
 import (
 	"errors"
-	"sync"
-
 	"github.com/DSiSc/statedb-NG/common"
+	"sync"
 )
 
 /*
