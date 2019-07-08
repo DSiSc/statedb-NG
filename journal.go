@@ -108,8 +108,9 @@ type (
 		prev    uint64
 	}
 	storageChange struct {
-		account       *types.Address
-		key, prevalue types.Hash
+		account  *types.Address
+		key      types.Hash
+		prevalue []byte
 	}
 	codeChange struct {
 		account            *types.Address

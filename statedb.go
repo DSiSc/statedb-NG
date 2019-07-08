@@ -260,13 +260,22 @@ func (self *StateDB) GetCodeHash(addr types.Address) types.Hash {
 	return util.BytesToHash(stateObject.CodeHash())
 }
 
-// GetState retrieves a value from the given account's storage trie.
-func (self *StateDB) GetState(addr types.Address, hash types.Hash) types.Hash {
+// GetHashTypeState retrieves a hash value from the given account's storage trie.
+func (self *StateDB) GetHashTypeState(addr types.Address, hash types.Hash) types.Hash {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetHashTypeState(self.db, hash)
+	}
+	return types.Hash{}
+}
+
+// GetHashTypeState retrieves a hash value from the given account's storage trie.
+func (self *StateDB) GetState(addr types.Address, hash types.Hash) []byte {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetState(self.db, hash)
 	}
-	return types.Hash{}
+	return emptyBytes
 }
 
 // GetProof returns the MerkleProof for a given Account
@@ -287,13 +296,22 @@ func (self *StateDB) GetStorageProof(a types.Address, key types.Hash) ([][]byte,
 	return [][]byte(proof), err
 }
 
-// GetCommittedHashState retrieves a value from the given account's committed storage trie.
-func (self *StateDB) GetCommittedState(addr types.Address, hash types.Hash) types.Hash {
+// GetCommittedHashTypeState retrieves a hash value from the given account's committed storage trie.
+func (self *StateDB) GetCommittedHashTypeState(addr types.Address, hash types.Hash) types.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.GetCommittedHashState(self.db, hash)
+		return stateObject.GetCommittedHashTypeState(self.db, hash)
 	}
 	return types.Hash{}
+}
+
+// GetCommittedHashTypeState retrieves a value from the given account's committed storage trie.
+func (self *StateDB) GetCommittedState(addr types.Address, hash types.Hash) []byte {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetCommittedState(self.db, hash)
+	}
+	return emptyBytes
 }
 
 // Database retrieves the low level database supporting the lower level trie ops.
@@ -361,7 +379,14 @@ func (self *StateDB) SetCode(addr types.Address, code []byte) {
 	}
 }
 
-func (self *StateDB) SetState(addr types.Address, key, value types.Hash) {
+func (self *StateDB) SetHashTypeState(addr types.Address, key, value types.Hash) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetHashTypeState(self.db, key, value)
+	}
+}
+
+func (self *StateDB) SetState(addr types.Address, key types.Hash, value []byte) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)

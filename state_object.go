@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/crypto-suite/crypto"
+	"github.com/DSiSc/statedb-NG/common"
 	"github.com/DSiSc/statedb-NG/common/rlp"
 	"github.com/DSiSc/statedb-NG/util"
 	"io"
@@ -169,52 +170,87 @@ func (c *stateObject) getTrie(db Database) Trie {
 	return c.trie
 }
 
-// GetState retrieves a value from the account storage trie.
-func (self *stateObject) GetState(db Database, key types.Hash) types.Hash {
+// GetHashTypeState retrieves a hash value from the account storage trie.
+func (self *stateObject) GetHashTypeState(db Database, key types.Hash) types.Hash {
 	// If we have a dirty value for this state entry, return it
 	value, dirty := self.dirtyStorage[key]
 	if dirty {
 		return util.BytesToHash(value)
 	}
 	// Otherwise return the entry's original value
-	return self.GetCommittedHashState(db, key)
+	return self.GetCommittedHashTypeState(db, key)
 }
 
-// GetCommittedHashState retrieves a value from the committed account storage trie.
-func (self *stateObject) GetCommittedHashState(db Database, key types.Hash) types.Hash {
-	// If we have the original value cached, return that
-	value, cached := self.originStorage[key]
-	if cached {
-		return util.BytesToHash(value)
-	} else {
-		value = util.HashToBytes(types.Hash{})
+// GetHashTypeState retrieves a value from the account storage trie.
+func (self *stateObject) GetState(db Database, key types.Hash) []byte {
+	// If we have a dirty value for this state entry, return it
+	value, dirty := self.dirtyStorage[key]
+	if dirty {
+		return value
 	}
-	// Otherwise load the value from the database
-	enc, err := self.getTrie(db).TryGet(key[:])
-	if err != nil {
-		self.setError(err)
-		return types.Hash{}
-	}
-	if len(enc) > 0 {
-		_, content, _, err := rlp.Split(enc)
-		if err != nil {
-			self.setError(err)
-		}
-		if len(content) > len(value) {
-			content = content[len(content)-util.HashLength:]
-		}
+	// Otherwise return the entry's original value
+	return self.GetCommittedState(db, key)
+}
 
-		copy(value[util.HashLength-len(content):], content)
+// GetCommittedHashTypeState retrieves a hash value from the committed account storage trie.
+func (self *stateObject) GetCommittedHashTypeState(db Database, key types.Hash) types.Hash {
+	// If we have the original value cached, return that
+	value := self.GetCommittedState(db, key)
+	if len(value) < util.HashLength {
+		value = common.LeftPadBytes(value, util.HashLength)
+	} else if len(value) > util.HashLength {
+		value = value[len(value)-util.HashLength:]
 	}
 	self.originStorage[key] = value
 	return util.BytesToHash(value)
 }
 
-// SetState updates a value in account storage.
-func (self *stateObject) SetState(db Database, key, value types.Hash) {
+var emptyBytes = make([]byte, 0)
+
+// GetCommittedHashTypeState retrieves a hash value from the committed account storage trie.
+func (self *stateObject) GetCommittedState(db Database, key types.Hash) []byte {
+	// If we have the original value cached, return that
+	value, cached := self.originStorage[key]
+	if cached {
+		return value
+	}
+	// Otherwise load the value from the database
+	enc, err := self.getTrie(db).TryGet(key[:])
+	if err != nil {
+		self.setError(err)
+		return emptyBytes
+	}
+	if len(enc) > 0 {
+		_, value, _, err = rlp.Split(enc)
+		if err != nil {
+			self.setError(err)
+		}
+	}
+	self.originStorage[key] = value
+	return value
+}
+
+// SetHashTypeState updates a hash value in account storage.
+func (self *stateObject) SetHashTypeState(db Database, key, value types.Hash) {
+	// If the new value is the same as old, don't set
+	prev := self.GetHashTypeState(db, key)
+	if prev == value {
+		return
+	}
+	// New value is different, update and journal the change
+	self.db.journal.append(storageChange{
+		account:  &self.address,
+		key:      key,
+		prevalue: util.HashToBytes(prev),
+	})
+	self.setHashTypeState(key, value)
+}
+
+// SetHashTypeState updates a value in account storage.
+func (self *stateObject) SetState(db Database, key types.Hash, value []byte) {
 	// If the new value is the same as old, don't set
 	prev := self.GetState(db, key)
-	if prev == value {
+	if bytes.Equal(prev, value) {
 		return
 	}
 	// New value is different, update and journal the change
@@ -226,11 +262,15 @@ func (self *stateObject) SetState(db Database, key, value types.Hash) {
 	self.setState(key, value)
 }
 
-func (self *stateObject) setState(key, value types.Hash) {
+func (self *stateObject) setHashTypeState(key, value types.Hash) {
 	self.dirtyStorage[key] = util.HashToBytes(value)
 }
 
-var emptyByte = util.HashToBytes(types.Hash{})
+func (self *stateObject) setState(key types.Hash, value []byte) {
+	self.dirtyStorage[key] = value
+}
+
+var emptyHashByte = util.HashToBytes(types.Hash{})
 
 // updateTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateTrie(db Database) Trie {
@@ -244,7 +284,7 @@ func (self *stateObject) updateTrie(db Database) Trie {
 		}
 		self.originStorage[key] = value
 
-		if bytes.Equal(value, emptyByte) {
+		if bytes.Equal(value, emptyHashByte) {
 			self.setError(tr.TryDelete(key[:]))
 			continue
 		}

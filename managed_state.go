@@ -43,7 +43,7 @@ func ManageState(statedb *StateDB) *ManagedState {
 	}
 }
 
-// SetState sets the backing layer of the managed state
+// SetHashTypeState sets the backing layer of the managed state
 func (ms *ManagedState) SetState(statedb *StateDB) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
