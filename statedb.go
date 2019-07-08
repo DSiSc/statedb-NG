@@ -229,6 +229,14 @@ func (self *StateDB) GetCode(addr types.Address) []byte {
 	return nil
 }
 
+func (self *StateDB) GetCodeType(addr types.Address) CodeType {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.codeType
+	}
+	return UnknownCode
+}
+
 func (self *StateDB) GetCodeSize(addr types.Address) int {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil {
@@ -279,11 +287,11 @@ func (self *StateDB) GetStorageProof(a types.Address, key types.Hash) ([][]byte,
 	return [][]byte(proof), err
 }
 
-// GetCommittedState retrieves a value from the given account's committed storage trie.
+// GetCommittedHashState retrieves a value from the given account's committed storage trie.
 func (self *StateDB) GetCommittedState(addr types.Address, hash types.Hash) types.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.GetCommittedState(self.db, hash)
+		return stateObject.GetCommittedHashState(self.db, hash)
 	}
 	return types.Hash{}
 }
@@ -483,7 +491,7 @@ func (db *StateDB) ForEachStorage(addr types.Address, cb func(key, value types.H
 	for it.Next() {
 		key := util.BytesToHash(db.trie.GetKey(it.Key))
 		if value, dirty := so.dirtyStorage[key]; dirty {
-			cb(key, value)
+			cb(key, util.BytesToHash(value))
 			continue
 		}
 		cb(key, util.BytesToHash(it.Value))

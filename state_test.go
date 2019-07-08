@@ -221,12 +221,12 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		t.Errorf("Dirty storage size mismatch: have %d, want %d", len(so1.dirtyStorage), len(so0.dirtyStorage))
 	}
 	for k, v := range so1.dirtyStorage {
-		if so0.dirtyStorage[k] != v {
+		if !bytes.Equal(so0.dirtyStorage[k], v) {
 			t.Errorf("Dirty storage key %x mismatch: have %v, want %v", k, so0.dirtyStorage[k], v)
 		}
 	}
 	for k, v := range so0.dirtyStorage {
-		if so1.dirtyStorage[k] != v {
+		if !bytes.Equal(so1.dirtyStorage[k], v) {
 			t.Errorf("Dirty storage key %x mismatch: have %v, want none.", k, v)
 		}
 	}
@@ -234,12 +234,12 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		t.Errorf("Origin storage size mismatch: have %d, want %d", len(so1.originStorage), len(so0.originStorage))
 	}
 	for k, v := range so1.originStorage {
-		if so0.originStorage[k] != v {
+		if !bytes.Equal(so0.originStorage[k], v) {
 			t.Errorf("Origin storage key %x mismatch: have %v, want %v", k, so0.originStorage[k], v)
 		}
 	}
 	for k, v := range so0.originStorage {
-		if so1.originStorage[k] != v {
+		if !bytes.Equal(so1.originStorage[k], v) {
 			t.Errorf("Origin storage key %x mismatch: have %v, want none.", k, v)
 		}
 	}

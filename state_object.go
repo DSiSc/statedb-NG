@@ -35,7 +35,7 @@ func (self Code) String() string {
 	return string(self) //strings.Join(Disassemble(self), " ")
 }
 
-type Storage map[types.Hash]types.Hash
+type Storage map[types.Hash][]byte
 
 func (self Storage) String() (str string) {
 	for key, value := range self {
@@ -53,6 +53,15 @@ func (self Storage) Copy() Storage {
 
 	return cpy
 }
+
+// CodeType use to identify the contract code type(solidity or wasm)
+type CodeType int
+
+const (
+	UnknownCode = CodeType(iota)
+	SolidityCode
+	WasmCode
+)
 
 // stateObject represents an Ethereum account which is being modified.
 //
@@ -74,8 +83,9 @@ type stateObject struct {
 	dbErr error
 
 	// Write caches.
-	trie Trie // storage trie, which becomes non-nil on first access
-	code Code // contract bytecode, which gets set when code is loaded
+	trie     Trie     // storage trie, which becomes non-nil on first access
+	codeType CodeType // contract code type(Solidity or Wasm)
+	code     Code     // contract bytecode, which gets set when code is loaded
 
 	originStorage Storage // Storage cache of original entries to dedup rewrites
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
@@ -164,18 +174,20 @@ func (self *stateObject) GetState(db Database, key types.Hash) types.Hash {
 	// If we have a dirty value for this state entry, return it
 	value, dirty := self.dirtyStorage[key]
 	if dirty {
-		return value
+		return util.BytesToHash(value)
 	}
 	// Otherwise return the entry's original value
-	return self.GetCommittedState(db, key)
+	return self.GetCommittedHashState(db, key)
 }
 
-// GetCommittedState retrieves a value from the committed account storage trie.
-func (self *stateObject) GetCommittedState(db Database, key types.Hash) types.Hash {
+// GetCommittedHashState retrieves a value from the committed account storage trie.
+func (self *stateObject) GetCommittedHashState(db Database, key types.Hash) types.Hash {
 	// If we have the original value cached, return that
 	value, cached := self.originStorage[key]
 	if cached {
-		return value
+		return util.BytesToHash(value)
+	} else {
+		value = util.HashToBytes(types.Hash{})
 	}
 	// Otherwise load the value from the database
 	enc, err := self.getTrie(db).TryGet(key[:])
@@ -195,7 +207,7 @@ func (self *stateObject) GetCommittedState(db Database, key types.Hash) types.Ha
 		copy(value[util.HashLength-len(content):], content)
 	}
 	self.originStorage[key] = value
-	return value
+	return util.BytesToHash(value)
 }
 
 // SetState updates a value in account storage.
@@ -215,8 +227,10 @@ func (self *stateObject) SetState(db Database, key, value types.Hash) {
 }
 
 func (self *stateObject) setState(key, value types.Hash) {
-	self.dirtyStorage[key] = value
+	self.dirtyStorage[key] = util.HashToBytes(value)
 }
+
+var emptyByte = util.HashToBytes(types.Hash{})
 
 // updateTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateTrie(db Database) Trie {
@@ -225,12 +239,12 @@ func (self *stateObject) updateTrie(db Database) Trie {
 		delete(self.dirtyStorage, key)
 
 		// Skip noop changes, persist actual changes
-		if value == self.originStorage[key] {
+		if bytes.Equal(value, self.originStorage[key]) {
 			continue
 		}
 		self.originStorage[key] = value
 
-		if (value == types.Hash{}) {
+		if bytes.Equal(value, emptyByte) {
 			self.setError(tr.TryDelete(key[:]))
 			continue
 		}
