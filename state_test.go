@@ -98,13 +98,30 @@ func (s *StateSuite) TestNull(c *checker.C) {
 	//value := common.FromHex("0x823140710bf13990e4500136726d8b55")
 	var value types.Hash
 
+	s.state.SetHashTypeState(address, types.Hash{}, value)
+	s.state.Commit(false)
+
+	if value := s.state.GetHashTypeState(address, types.Hash{}); value != (types.Hash{}) {
+		c.Errorf("expected empty current value, got %x", value)
+	}
+	if value := s.state.GetCommittedHashTypeState(address, types.Hash{}); value != (types.Hash{}) {
+		c.Errorf("expected empty committed value, got %x", value)
+	}
+}
+
+func (s *StateSuite) TestNull1(c *checker.C) {
+	address := util.HexToAddress("0x823140710bf13990e4500136726d8b55")
+	s.state.CreateAccount(address)
+	//value := common.FromHex("0x823140710bf13990e4500136726d8b55")
+	value := emptyBytes
+
 	s.state.SetState(address, types.Hash{}, value)
 	s.state.Commit(false)
 
-	if value := s.state.GetState(address, types.Hash{}); value != (types.Hash{}) {
+	if value := s.state.GetState(address, types.Hash{}); !bytes.Equal(value, emptyBytes) {
 		c.Errorf("expected empty current value, got %x", value)
 	}
-	if value := s.state.GetCommittedState(address, types.Hash{}); value != (types.Hash{}) {
+	if value := s.state.GetCommittedState(address, types.Hash{}); !bytes.Equal(value, emptyBytes) {
 		c.Errorf("expected empty committed value, got %x", value)
 	}
 }
@@ -119,20 +136,20 @@ func (s *StateSuite) TestSnapshot(c *checker.C) {
 	genesis := s.state.Snapshot()
 
 	// set initial state object value
-	s.state.SetState(stateobjaddr, storageaddr, data1)
+	s.state.SetHashTypeState(stateobjaddr, storageaddr, data1)
 	snapshot := s.state.Snapshot()
 
 	// set a new state object value, revert it and ensure correct content
-	s.state.SetState(stateobjaddr, storageaddr, data2)
+	s.state.SetHashTypeState(stateobjaddr, storageaddr, data2)
 	s.state.RevertToSnapshot(snapshot)
 
-	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, data1)
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, types.Hash{})
+	c.Assert(s.state.GetHashTypeState(stateobjaddr, storageaddr), checker.DeepEquals, data1)
+	c.Assert(s.state.GetCommittedHashTypeState(stateobjaddr, storageaddr), checker.DeepEquals, types.Hash{})
 
 	// revert up to the genesis state and ensure correct content
 	s.state.RevertToSnapshot(genesis)
-	c.Assert(s.state.GetState(stateobjaddr, storageaddr), checker.DeepEquals, types.Hash{})
-	c.Assert(s.state.GetCommittedState(stateobjaddr, storageaddr), checker.DeepEquals, types.Hash{})
+	c.Assert(s.state.GetHashTypeState(stateobjaddr, storageaddr), checker.DeepEquals, types.Hash{})
+	c.Assert(s.state.GetCommittedHashTypeState(stateobjaddr, storageaddr), checker.DeepEquals, types.Hash{})
 }
 
 func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
@@ -151,8 +168,8 @@ func TestSnapshot2(t *testing.T) {
 	data0 := util.BytesToHash([]byte{17})
 	data1 := util.BytesToHash([]byte{18})
 
-	state.SetState(stateobjaddr0, storageaddr, data0)
-	state.SetState(stateobjaddr1, storageaddr, data1)
+	state.SetHashTypeState(stateobjaddr0, storageaddr, data0)
+	state.SetHashTypeState(stateobjaddr1, storageaddr, data1)
 
 	// db, trie are already non-empty values
 	so0 := state.getStateObject(stateobjaddr0)
@@ -185,7 +202,7 @@ func TestSnapshot2(t *testing.T) {
 
 	so0Restored := state.getStateObject(stateobjaddr0)
 	// Update lazily-loaded values before comparing.
-	so0Restored.GetState(state.db, storageaddr)
+	so0Restored.GetHashTypeState(state.db, storageaddr)
 	so0Restored.Code(state.db)
 	// non-deleted is equal (restored)
 	compareStateObjects(so0Restored, so0, t)
@@ -221,12 +238,12 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		t.Errorf("Dirty storage size mismatch: have %d, want %d", len(so1.dirtyStorage), len(so0.dirtyStorage))
 	}
 	for k, v := range so1.dirtyStorage {
-		if so0.dirtyStorage[k] != v {
+		if !bytes.Equal(so0.dirtyStorage[k], v) {
 			t.Errorf("Dirty storage key %x mismatch: have %v, want %v", k, so0.dirtyStorage[k], v)
 		}
 	}
 	for k, v := range so0.dirtyStorage {
-		if so1.dirtyStorage[k] != v {
+		if !bytes.Equal(so1.dirtyStorage[k], v) {
 			t.Errorf("Dirty storage key %x mismatch: have %v, want none.", k, v)
 		}
 	}
@@ -234,12 +251,12 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		t.Errorf("Origin storage size mismatch: have %d, want %d", len(so1.originStorage), len(so0.originStorage))
 	}
 	for k, v := range so1.originStorage {
-		if so0.originStorage[k] != v {
+		if !bytes.Equal(so0.originStorage[k], v) {
 			t.Errorf("Origin storage key %x mismatch: have %v, want %v", k, so0.originStorage[k], v)
 		}
 	}
 	for k, v := range so0.originStorage {
-		if so1.originStorage[k] != v {
+		if !bytes.Equal(so1.originStorage[k], v) {
 			t.Errorf("Origin storage key %x mismatch: have %v, want none.", k, v)
 		}
 	}

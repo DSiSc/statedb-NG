@@ -31,6 +31,7 @@ import (
 	"github.com/DSiSc/craft/types"
 	"github.com/DSiSc/statedb-NG/rawdb"
 	"github.com/DSiSc/statedb-NG/util"
+	"github.com/stretchr/testify/assert"
 	check "gopkg.in/check.v1"
 )
 
@@ -47,7 +48,7 @@ func TestUpdateLeaks(t *testing.T) {
 		state.AddBalance(addr, big.NewInt(int64(11*i)))
 		state.SetNonce(addr, uint64(42*i))
 		if i%2 == 0 {
-			state.SetState(addr, util.BytesToHash([]byte{i, i, i}), util.BytesToHash([]byte{i, i, i, i}))
+			state.SetHashTypeState(addr, util.BytesToHash([]byte{i, i, i}), util.BytesToHash([]byte{i, i, i, i}))
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i})
@@ -75,8 +76,8 @@ func TestIntermediateLeaks(t *testing.T) {
 		state.SetBalance(addr, big.NewInt(int64(11*i)+int64(tweak)))
 		state.SetNonce(addr, uint64(42*i+tweak))
 		if i%2 == 0 {
-			state.SetState(addr, types.Hash{i, i, i, 0}, types.Hash{})
-			state.SetState(addr, types.Hash{i, i, i, tweak}, types.Hash{i, i, i, i, tweak})
+			state.SetHashTypeState(addr, types.Hash{i, i, i, 0}, types.Hash{})
+			state.SetHashTypeState(addr, types.Hash{i, i, i, tweak}, types.Hash{i, i, i, i, tweak})
 		}
 		if i%3 == 0 {
 			state.SetCode(addr, []byte{i, i, i, i, i, tweak})
@@ -232,12 +233,12 @@ func newTestAction(addr types.Address, r *rand.Rand) testAction {
 			args: make([]int64, 1),
 		},
 		{
-			name: "SetState",
+			name: "SetHashTypeState",
 			fn: func(a testAction, s *StateDB) {
 				var key, val types.Hash
 				binary.BigEndian.PutUint16(key[:], uint16(a.args[0]))
 				binary.BigEndian.PutUint16(val[:], uint16(a.args[1]))
-				s.SetState(addr, key, val)
+				s.SetHashTypeState(addr, key, val)
 			},
 			args: make([]int64, 2),
 		},
@@ -395,10 +396,10 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		// Check storage.
 		if obj := state.getStateObject(addr); obj != nil {
 			state.ForEachStorage(addr, func(key, value types.Hash) bool {
-				return checkeq("GetState("+util.AddressToHex(addr)+")", checkstate.GetState(addr, key), value)
+				return checkeq("GetHashTypeState("+util.AddressToHex(addr)+")", checkstate.GetHashTypeState(addr, key), value)
 			})
 			checkstate.ForEachStorage(addr, func(key, value types.Hash) bool {
-				return checkeq("GetState("+util.AddressToHex(addr)+")", checkstate.GetState(addr, key), value)
+				return checkeq("GetHashTypeState("+util.AddressToHex(addr)+")", checkstate.GetHashTypeState(addr, key), value)
 			})
 		}
 		if err != nil {
@@ -447,4 +448,66 @@ func TestCopyOfCopy(t *testing.T) {
 	if got := sdb.Copy().Copy().GetBalance(addr).Uint64(); got != 42 {
 		t.Fatalf("2nd copy fail, expected 42, got %v", got)
 	}
+}
+
+func TestStateDB_IntermediateRoot(t *testing.T) {
+	sdb, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
+	addr := util.HexToAddress("aaaa")
+	sdb.SetBalance(addr, big.NewInt(42))
+
+	key := util.BytesToHash([]byte("hello"))
+	value := []byte("world")
+	sdb.SetState(addr, key, value)
+
+	root1 := sdb.IntermediateRoot(false)
+
+	key = util.BytesToHash([]byte("hello1"))
+	value = []byte("world1")
+	sdb.SetState(addr, key, value)
+	root2 := sdb.IntermediateRoot(false)
+	assert.NotEqual(t, root1, root2)
+}
+
+func TestStateDB_Commit(t *testing.T) {
+	sdb, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
+	addr := util.HexToAddress("aaaa")
+	sdb.SetBalance(addr, big.NewInt(42))
+	key := util.BytesToHash([]byte("hello"))
+	value := []byte("world")
+	value1 := []byte("world1")
+	sdb.SetState(addr, key, value)
+	root, _ := sdb.Commit(false)
+
+	sdb1, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
+	sdb1.SetBalance(addr, big.NewInt(42))
+	sdb1.SetState(addr, key, value)
+	root1, _ := sdb.Commit(false)
+	assert.Equal(t, root, root1)
+
+	sdb2, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
+	sdb2.SetBalance(addr, big.NewInt(42))
+	sdb2.SetState(addr, key, value1)
+	root2, _ := sdb.Commit(false)
+	assert.Equal(t, root, root2)
+}
+
+func TestStateDB_Commit1(t *testing.T) {
+	sdb, _ := New(types.Hash{}, NewDatabase(rawdb.NewMemoryDatabase()))
+	addr := util.HexToAddress("aaaa")
+	sdb.SetBalance(addr, big.NewInt(42))
+	key := util.BytesToHash([]byte("hello"))
+	value := []byte("world")
+	value1 := []byte("world1")
+	sdb.SetState(addr, key, value)
+	root, _ := sdb.Commit(false)
+
+	sdb.SetState(addr, key, value1)
+	root1, _ := sdb.Commit(false)
+	assert.NotEqual(t, value, sdb.GetState(addr, key))
+
+	sdb.Reset(root)
+	assert.Equal(t, value, sdb.GetState(addr, key))
+
+	sdb.Reset(root1)
+	assert.Equal(t, value1, sdb.GetState(addr, key))
 }
